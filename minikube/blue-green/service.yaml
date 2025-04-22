@@ -1,8 +1,8 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: myapp-service
-  namespace: belo
+  name: blue-green-service
+  namespace: blue-green
 spec:
   selector:
     version: blue # Cambiar a "green" para cambiar de versión

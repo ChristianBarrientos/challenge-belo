@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: app-green
-  namespace: belo
+  namespace: blue-green
 spec:
   replicas: 2
   selector:
