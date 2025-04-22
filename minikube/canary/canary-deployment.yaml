@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-v1
+  namespace: canary
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web-app
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: web-app
+        version: v1
+    spec:
+      containers:
+      - name: app
+        image: app-green:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-v2
+  namespace: canary
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: web-app
+      version: v2
+  template:
+    metadata:
+      labels:
+        app: web-app
+        version: v2
+    spec:
+      containers:
+      - name: app
+        image: app-green:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 3000
