@@ -1,44 +1,44 @@
-# 🚦 Pruebas de Carga con k6
+# 🚦 Load Testing with k6
 
-Este directorio contiene un script de pruebas de carga usando [k6](https://k6.io/), ideal para validar el comportamiento de los despliegues **Blue/Green** y **Canary** en Kubernetes.
-
----
-
-## ✅ Requisitos
-
-- Tener la aplicación expuesta localmente mediante `kubectl port-forward`
-- Tener instalado `k6` localmente o usarlo vía Docker
+###### This directory contains a load testing script using [k6](https://k6.io/), ideal for validating the behavior of **Blue/Green** and **Canary** deployments in Kubernetes.
 
 ---
 
-## 🚀 Cómo ejecutar los tests
+## ✅ Requirements
 
-### 1. Exponer el servicio
+- The application exposed locally via `kubectl port-forward`
+- Having `k6` installed locally or using it via Docker
 
-Ejecutá el siguiente comando para redirigir tráfico del puerto 8081 local al `Service` en Kubernetes:
+---
+
+## 🚀 How to run the tests
+
+### 1. Expose the service
+
+Run the following command to redirect traffic from local port 8081 to the Kubernetes Service:
 
 ```bash
 kubectl -n canary port-forward svc/canary-service 8081:80
-#Accesible en: http://localhost:8081
+# Accessible at: http://localhost:8081
 ```
 
-### 2. Exportar la URL para k6
+### 2. Export the URL for k6
 ```bash
 export SERVICE_URL=http://localhost:8081
-#Actualmente hardcodeado en el script
+# Currently hardcoded in the script
 ```
 
-### 3. Ejecutar el test de carga
+### 3. Run the load test
 ```bash
 cd load_tests/k6
 k6 run ./script.js
 ```
 
-## 🧪 Detalles del test (script.js)
+## 🧪  Test details (script.js)
 
-Este script simula un escenario de uso gradual con picos y control de errores.
+This script simulates a gradual usage scenario with peaks and error handling.
 
-### Configuración de la prueba
+### Test configuration
 ```js
 export let options = {
   stages: [
@@ -47,14 +47,15 @@ export let options = {
     { duration: '30s', target: 0 },   // ramp-down
   ],
   thresholds: {
-    http_req_duration: ['p(95)<500'],  // 95% de respuestas < 500ms
-    http_req_failed: ['rate<0.01'],    // <1% de errores permitidos
+    http_req_duration: ['p(95)<500'],  // 95% of responses < 500ms
+    http_req_failed: ['rate<0.01'],    // <1% of errors allowed
   },
 };
 
 
 ```bash
-Salida de ejemplo:
+Example output:
+
 k6 run script.js
 
           /\      |‾‾| /‾‾/   /‾‾/   
@@ -98,30 +99,63 @@ running (2m00.5s), 00/20 VUs, 1818 complete and 0 interrupted iterations
 default ✓ [======================================] 00/20 VUs  2m0s
 ```
 
-### ✅ Validaciones incluidas
-- Código de estado HTTP 200
-- Presencia del header X-App-Version (útil para identificar la versión activa)
+### ✅ Included validations
+- HTTP status code 200
+- Presence of the X-App-Version header (useful for identifying the active version)
 
-### ⚙️ Personalización
-Podés editar el script para:
-- Cambiar la cantidad de usuarios virtuales (VUs)
-- Ajustar duración de las fases de carga
-- Validar contenido del cuerpo de la respuesta
-- Simular autenticación (tokens, headers personalizados)
-- Enviar peticiones POST, PUT, DELETE, etc.
-- Agregar delays más complejos, loops o escenarios por segmento
+### ⚙️ Customization
+You can edit the script to:
+#### Change the number of virtual users (VUs)
+```js
+export let options = {
+  vus: 50,              // establecer un número fijo de VUs
+  duration: '2m',       // duración total de la prueba
+  thresholds: {
+    http_req_duration: ['p(95)<500'],
+  },
+};
+```
 
-### 📈 Métricas que se muestran
-- Peticiones exitosas y fallidas
-- Latencias (promedio, p95, p99)
-- Tiempo de espera (http_req_waiting)
-- Tiempo total de iteración
-- Peticiones por segundo (RPS)
-- Cantidad total de iteraciones completadas
+#### Adjust the duration of the load phases
+```js
+export let options = {
+  stages: [
+    { duration: '1m',  target: 50 },  // ramp‑up: subir a 50 VUs en 1 minuto
+    { duration: '2m',  target: 50 },  // steady: mantener 50 VUs por 2 minutos
+    { duration: '1m',  target: 0  },  // ramp‑down: bajar a 0 VUs en 1 minuto
+  ],
+  thresholds: {
+    http_req_duration: ['p(95)<500'],
+  },
+};
+```
+#### Validate response body content
+```js
+import http from 'k6/http';
+import { check } from 'k6';
 
-### 📚 Recursos útiles
-- [Documentación oficial de k6](https://k6.io/docs/)
-- [Configuración avanzada de escenarios](https://k6.io/docs/using-k6/scenarios/)
-- [Validación de respuestas](https://k6.io/docs/using-k6/checks/)
-- [Salida de métricas en tiempo real](https://k6.io/docs/results-output/real-time/)
-- [Repositorio GitHub de k6](https://github.com/grafana/k6)
+export default function () {
+  const res = http.get(`${__ENV.SERVICE_URL}/api/health`);
+  check(res, {
+    'status is 200': (r) => r.status === 200,
+    'body contains "OK"': (r) => r.body.includes('OK'),
+  });
+}
+
+```
+
+
+### 📈 Metrics displayed
+- Successful and failed requests
+- Latencies (average, p95, p99)
+- Wait time (http_req_waiting)
+- Total iteration time
+- Requests per second (RPS)
+- Total number of completed iterations
+
+### 📚  Useful resources
+- [Official k6 documentation](https://k6.io/docs/)
+- [Advanced scenario configuration](https://k6.io/docs/using-k6/scenarios/)
+- [Response validation](https://k6.io/docs/using-k6/checks/)
+- [Real-time metrics output](https://k6.io/docs/results-output/real-time/)
+- [k6 GitHub repository](https://github.com/grafana/k6)
